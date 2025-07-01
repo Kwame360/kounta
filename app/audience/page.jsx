@@ -23,38 +23,13 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 import { addNotification } from "@/utils/notification-service"
-
-const mockData = [
-  {
-    id: 1,
-    name: "Janet Adebayo",
-    familyClan: "Aduana",
-    hometown: "Koforidua",
-    citizenship: "Ghanaian",
-    photoUrl: "/placeholder.svg",
-  },
-  {
-    id: 2,
-    name: "Kwame Nkrumah",
-    familyClan: "Asona",
-    hometown: "Nkroful",
-    citizenship: "Ghanaian",
-    photoUrl: "/placeholder.svg",
-  },
-  {
-    id: 3,
-    name: "Yaa Asantewaa",
-    familyClan: "Bretuo",
-    hometown: "Kumasi",
-    citizenship: "Ghanaian",
-    photoUrl: "/placeholder.svg",
-  },
-]
+import { peopleService } from "@/lib/database"
 
 const clanOptions = ["Aduana", "Agona", "Asakyiri", "Asene", "Asona", "Bretuo", "Ekuona", "Oyoko", "Others"]
 
 export default function AudiencePage() {
-  const [people, setPeople] = useState(mockData)
+  const [people, setPeople] = useState([])
+  const [loading, setLoading] = useState(true)
   const [isAddingPerson, setIsAddingPerson] = useState(false)
   const [isBatchRegistering, setIsBatchRegistering] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -65,109 +40,206 @@ export default function AudiencePage() {
   const [editingPerson, setEditingPerson] = useState(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, personId: null })
 
+  // Load people from database
   useEffect(() => {
-    localStorage.setItem("people", JSON.stringify(people))
-  }, [people])
+    loadPeople()
+  }, [])
 
-  const handleBatchRegister = (csvData) => {
-    console.log("Raw CSV data:", csvData) // Debug log
+  const loadPeople = async () => {
+    try {
+      setLoading(true)
+      const data = await peopleService.getAll()
+      setPeople(data || [])
+    } catch (error) {
+      console.error('Error loading people:', error)
+      // Fallback to localStorage
+      const storedPeople = JSON.parse(localStorage.getItem("people") || "[]")
+      setPeople(storedPeople)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    const newPeople = csvData.map((row, index) => {
-      // Check if the row has the expected properties
-      if (!row.name && !row.familyClan && !row.hometown && !row.citizenship) {
-        console.log("Row data format:", Object.keys(row)) // Debug log
-        // Try to map based on CSV column order if headers don't match
+  const handleAddPerson = async (newPersonData) => {
+    try {
+      const personToCreate = {
+        first_name: newPersonData.firstName,
+        last_name: newPersonData.lastName,
+        middle_name: newPersonData.middleName || null,
+        gender: newPersonData.gender || null,
+        date_of_birth: newPersonData.dateOfBirth || null,
+        place_of_birth: newPersonData.placeOfBirth || null,
+        citizenship: newPersonData.citizenship || null,
+        hometown: newPersonData.hometown || null,
+        region: newPersonData.region || null,
+        district: newPersonData.district || null,
+        electoral_area: newPersonData.electoralArea || null,
+        marital_status: newPersonData.maritalStatus || null,
+        number_of_children: newPersonData.numberOfChildren || 0,
+        residential_address: newPersonData.residentialAddress || null,
+        gps_address: newPersonData.gpsAddress || null,
+        home_type: newPersonData.homeType || null,
+        landlord_name: newPersonData.landlordName || null,
+        landlord_contact: newPersonData.landlordContact || null,
+        family_clan: newPersonData.familyClan || null,
+        clan_head: newPersonData.clanHead || null,
+        contact_number: newPersonData.contactNumber || null,
+        father_name: newPersonData.fatherName || null,
+        mother_name: newPersonData.motherName || null,
+        id_type: newPersonData.idType || null,
+        id_number: newPersonData.idNumber || null,
+        occupation: newPersonData.occupation || null,
+        place_of_work: newPersonData.placeOfWork || null,
+        education_level: newPersonData.educationLevel || null,
+        school_name: newPersonData.schoolName || null,
+        photo_url: newPersonData.photoUrl || null,
+      }
+
+      const createdPerson = await peopleService.create(personToCreate)
+      setPeople(prev => [createdPerson, ...prev])
+
+      await addNotification({
+        type: "create",
+        message: `Added new profile for ${createdPerson.name}`,
+        details: `New individual registered with ID: ${createdPerson.id}`,
+      })
+
+      setIsAddingPerson(false)
+    } catch (error) {
+      console.error('Error adding person:', error)
+      alert('Failed to add person. Please try again.')
+    }
+  }
+
+  const handleBatchRegister = async (csvData) => {
+    try {
+      const peopleToCreate = csvData.map((row) => {
         const values = Object.values(row)
         return {
-          id: Date.now() + index,
-          name: values[0] || "Unknown",
-          familyClan: values[1] || "Unknown",
-          hometown: values[2] || "Unknown",
-          citizenship: values[3] || "Unknown",
-          photoUrl: values[4] || "/placeholder.svg",
-          createdAt: new Date().toISOString(),
+          first_name: (row.firstName || row.name?.split(" ")[0] || values[0] || "Unknown").trim(),
+          last_name: (row.lastName || row.name?.split(" ").slice(1).join(" ") || "").trim() || "Unknown",
+          family_clan: row.familyClan || row["Family/Clan"] || values[1] || null,
+          hometown: row.hometown || row.Hometown || values[2] || null,
+          citizenship: row.citizenship || row.Citizenship || values[3] || null,
+          photo_url: row.photoUrl || row.PhotoUrl || values[4] || null,
         }
-      }
+      })
 
-      // If headers match, use the standard mapping
-      return {
-        id: Date.now() + index,
-        name: row.name || row.Name || "Unknown",
-        familyClan: row.familyClan || row["Family/Clan"] || "Unknown",
-        hometown: row.hometown || row.Hometown || "Unknown",
-        citizenship: row.citizenship || row.Citizenship || "Unknown",
-        photoUrl: row.photoUrl || row.PhotoUrl || "/placeholder.svg",
-        createdAt: new Date().toISOString(),
-      }
-    })
+      const createdPeople = await peopleService.createBatch(peopleToCreate)
+      setPeople(prev => [...createdPeople, ...prev])
 
-    console.log("Processed people data:", newPeople) // Debug log
+      await addNotification({
+        type: "create",
+        message: `Batch registered ${createdPeople.length} people`,
+        details: `Added ${createdPeople.length} people from CSV import`,
+      })
 
-    setPeople((currentPeople) => [...currentPeople, ...newPeople])
-    setIsBatchRegistering(false)
-
-    // Add notification for batch registration
-    addNotification({
-      type: "create",
-      message: `Batch registered ${newPeople.length} people`,
-      details: `Added ${newPeople.length} people from CSV import`,
-    })
-
-    alert(`Successfully added ${newPeople.length} people`)
+      setIsBatchRegistering(false)
+      alert(`Successfully added ${createdPeople.length} people`)
+    } catch (error) {
+      console.error('Error batch registering:', error)
+      alert('Failed to batch register people. Please try again.')
+    }
   }
 
-  const handleEditPerson = (updatedPerson) => {
-    setPeople((prevPeople) =>
-      prevPeople.map((person) =>
-        person.id === updatedPerson.id
-          ? {
-              ...person,
-              ...updatedPerson,
-              // Ensure the name is properly updated from first/last name
-              name: `${updatedPerson.firstName} ${updatedPerson.lastName}`.trim(),
-            }
-          : person,
-      ),
-    )
+  const handleEditPerson = async (updatedPersonData) => {
+    try {
+      const personToUpdate = {
+        first_name: updatedPersonData.firstName,
+        last_name: updatedPersonData.lastName,
+        middle_name: updatedPersonData.middleName || null,
+        gender: updatedPersonData.gender || null,
+        date_of_birth: updatedPersonData.dateOfBirth || null,
+        place_of_birth: updatedPersonData.placeOfBirth || null,
+        citizenship: updatedPersonData.citizenship || null,
+        hometown: updatedPersonData.hometown || null,
+        region: updatedPersonData.region || null,
+        district: updatedPersonData.district || null,
+        electoral_area: updatedPersonData.electoralArea || null,
+        marital_status: updatedPersonData.maritalStatus || null,
+        number_of_children: updatedPersonData.numberOfChildren || 0,
+        residential_address: updatedPersonData.residentialAddress || null,
+        gps_address: updatedPersonData.gpsAddress || null,
+        home_type: updatedPersonData.homeType || null,
+        landlord_name: updatedPersonData.landlordName || null,
+        landlord_contact: updatedPersonData.landlordContact || null,
+        family_clan: updatedPersonData.familyClan || null,
+        clan_head: updatedPersonData.clanHead || null,
+        contact_number: updatedPersonData.contactNumber || null,
+        father_name: updatedPersonData.fatherName || null,
+        mother_name: updatedPersonData.motherName || null,
+        id_type: updatedPersonData.idType || null,
+        id_number: updatedPersonData.idNumber || null,
+        occupation: updatedPersonData.occupation || null,
+        place_of_work: updatedPersonData.placeOfWork || null,
+        education_level: updatedPersonData.educationLevel || null,
+        school_name: updatedPersonData.schoolName || null,
+        photo_url: updatedPersonData.photoUrl || null,
+      }
 
-    // Add notification for update
-    addNotification({
-      type: "update",
-      message: `Updated profile for ${updatedPerson.firstName} ${updatedPerson.lastName}`,
-      details: `Profile information was modified`,
-    })
+      const updatedPerson = await peopleService.update(updatedPersonData.id, personToUpdate)
+      setPeople(prev => prev.map(person => person.id === updatedPerson.id ? updatedPerson : person))
 
-    setIsEditingPerson(false)
-    setEditingPerson(null)
+      await addNotification({
+        type: "update",
+        message: `Updated profile for ${updatedPerson.name}`,
+        details: `Profile information was modified`,
+      })
+
+      setIsEditingPerson(false)
+      setEditingPerson(null)
+    } catch (error) {
+      console.error('Error updating person:', error)
+      alert('Failed to update person. Please try again.')
+    }
   }
 
-  const handleDeletePerson = () => {
+  const handleDeletePerson = async () => {
     if (deleteConfirmation.personId) {
-      // Find the person before deleting for the notification
-      const personToDelete = people.find((person) => person.id === deleteConfirmation.personId)
+      try {
+        const personToDelete = people.find((person) => person.id === deleteConfirmation.personId)
+        
+        await peopleService.delete(deleteConfirmation.personId)
+        setPeople(prev => prev.filter((person) => person.id !== deleteConfirmation.personId))
 
-      setPeople((prevPeople) => prevPeople.filter((person) => person.id !== deleteConfirmation.personId))
+        if (personToDelete) {
+          await addNotification({
+            type: "delete",
+            message: `Deleted profile for ${personToDelete.name}`,
+            details: `Profile was permanently removed from the system`,
+          })
+        }
 
-      // Add notification for deletion
-      if (personToDelete) {
-        addNotification({
-          type: "delete",
-          message: `Deleted profile for ${personToDelete.name}`,
-          details: `Profile was permanently removed from the system`,
-        })
+        setDeleteConfirmation({ isOpen: false, personId: null })
+      } catch (error) {
+        console.error('Error deleting person:', error)
+        alert('Failed to delete person. Please try again.')
       }
-
-      setDeleteConfirmation({ isOpen: false, personId: null })
     }
   }
 
   const filteredPeople = people.filter(
     (person) =>
-      person.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (filterClan === "all" || person.familyClan === filterClan) &&
+      person.name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      (filterClan === "all" || person.family_clan === filterClan) &&
       (filterCitizenship === "all" || person.citizenship === filterCitizenship) &&
       (filterHometown === "all" || person.hometown === filterHometown),
   )
+
+  const hometowns = [...new Set(people.map(p => p.hometown).filter(Boolean))]
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading people...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>
@@ -219,9 +291,11 @@ export default function AudiencePage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Hometowns</SelectItem>
-            <SelectItem value="Koforidua">Koforidua</SelectItem>
-            <SelectItem value="Nkroful">Nkroful</SelectItem>
-            <SelectItem value="Kumasi">Kumasi</SelectItem>
+            {hometowns.map((hometown) => (
+              <SelectItem key={hometown} value={hometown}>
+                {hometown}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -244,12 +318,12 @@ export default function AudiencePage() {
                 <TableRow key={person.id}>
                   <TableCell>
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={person.photoUrl} alt={person.name} />
-                      <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={person.photo_url} alt={person.name} />
+                      <AvatarFallback>{person.name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell>{person.name}</TableCell>
-                  <TableCell className="hidden md:table-cell">{person.familyClan}</TableCell>
+                  <TableCell className="hidden md:table-cell">{person.family_clan}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.hometown}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.citizenship}</TableCell>
                   <TableCell>
@@ -258,35 +332,38 @@ export default function AudiencePage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          console.log("Editing person:", person) // Debug log
                           setEditingPerson({
                             id: person.id,
-                            name: person.name,
-                            familyClan: person.familyClan,
-                            hometown: person.hometown,
-                            citizenship: person.citizenship,
-                            photoUrl: person.photoUrl,
-                            firstName: person.firstName || person.name.split(" ")[0],
-                            lastName: person.lastName || person.name.split(" ").slice(1).join(" "),
-                            middleName: person.middleName || "",
+                            firstName: person.first_name,
+                            lastName: person.last_name,
+                            middleName: person.middle_name || "",
                             gender: person.gender || "",
-                            dateOfBirth: person.dateOfBirth || "",
-                            placeOfBirth: person.placeOfBirth || "",
-                            maritalStatus: person.maritalStatus || "",
-                            numberOfChildren: person.numberOfChildren || 0,
-                            residentialAddress: person.residentialAddress || "",
-                            gpsAddress: person.gpsAddress || "",
-                            homeType: person.homeType || "",
-                            clanHead: person.clanHead || "",
-                            contactNumber: person.contactNumber || "",
-                            fatherName: person.fatherName || "",
-                            motherName: person.motherName || "",
-                            idType: person.idType || "",
-                            idNumber: person.idNumber || "",
+                            dateOfBirth: person.date_of_birth || "",
+                            placeOfBirth: person.place_of_birth || "",
+                            citizenship: person.citizenship || "",
+                            hometown: person.hometown || "",
+                            region: person.region || "",
+                            district: person.district || "",
+                            electoralArea: person.electoral_area || "",
+                            maritalStatus: person.marital_status || "",
+                            numberOfChildren: person.number_of_children || 0,
+                            residentialAddress: person.residential_address || "",
+                            gpsAddress: person.gps_address || "",
+                            homeType: person.home_type || "",
+                            landlordName: person.landlord_name || "",
+                            landlordContact: person.landlord_contact || "",
+                            familyClan: person.family_clan || "",
+                            clanHead: person.clan_head || "",
+                            contactNumber: person.contact_number || "",
+                            fatherName: person.father_name || "",
+                            motherName: person.mother_name || "",
+                            idType: person.id_type || "",
+                            idNumber: person.id_number || "",
                             occupation: person.occupation || "",
-                            placeOfWork: person.placeOfWork || "",
-                            educationLevel: person.educationLevel || "",
-                            schoolName: person.schoolName || "",
+                            placeOfWork: person.place_of_work || "",
+                            educationLevel: person.education_level || "",
+                            schoolName: person.school_name || "",
+                            photoUrl: person.photo_url || "",
                           })
                           setIsEditingPerson(true)
                         }}
@@ -317,25 +394,7 @@ export default function AudiencePage() {
             <DialogTitle>Add New Individual</DialogTitle>
             <DialogDescription>Fill in the details to add a new person to the audience.</DialogDescription>
           </DialogHeader>
-          <AddPersonForm
-            onSuccess={(newPerson) => {
-              const personWithId = {
-                ...newPerson,
-                id: Date.now(),
-                createdAt: new Date().toISOString(),
-              }
-              setPeople([...people, personWithId])
-
-              // Add notification for new person
-              addNotification({
-                type: "create",
-                message: `Added new profile for ${personWithId.name}`,
-                details: `New individual registered with ID: ${personWithId.id}`,
-              })
-
-              setIsAddingPerson(false)
-            }}
-          />
+          <AddPersonForm onSuccess={handleAddPerson} />
         </DialogContent>
       </Dialog>
 

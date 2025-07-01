@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MainLayout } from "@/components/layout/main-layout"
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip, BarChart, Bar, XAxis, YAxis } from "recharts"
+import { peopleService } from "@/lib/database"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -16,20 +17,32 @@ export default function DashboardPage() {
     if (authStatus !== "true") {
       router.push("/login")
     } else {
-      // In a real application, you would fetch this data from an API
-      const storedPeople = JSON.parse(localStorage.getItem("people") || "[]")
-      setPeople(storedPeople)
-      setIsLoading(false)
+      loadPeople()
     }
   }, [router])
 
+  const loadPeople = async () => {
+    try {
+      setIsLoading(true)
+      const data = await peopleService.getAll()
+      setPeople(data || [])
+    } catch (error) {
+      console.error('Error loading people:', error)
+      // Fallback to localStorage
+      const storedPeople = JSON.parse(localStorage.getItem("people") || "[]")
+      setPeople(storedPeople)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Calculate statistics
   const totalAudience = people.length
-  const familiesCount = new Set(people.map((p) => p.familyClan).filter(Boolean)).size
+  const familiesCount = new Set(people.map((p) => p.family_clan).filter(Boolean)).size
   const hometownsCount = new Set(people.map((p) => p.hometown).filter(Boolean)).size
   const newThisMonth = people.filter((p) => {
-    if (!p.createdAt) return false
-    const createdAt = new Date(p.createdAt)
+    if (!p.created_at) return false
+    const createdAt = new Date(p.created_at)
     const now = new Date()
     return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear()
   }).length
@@ -42,8 +55,8 @@ export default function DashboardPage() {
 
   // Process family data and ensure it has values
   const familyDataRaw = people.reduce((acc, p) => {
-    if (p.familyClan) {
-      acc[p.familyClan] = (acc[p.familyClan] || 0) + 1
+    if (p.family_clan) {
+      acc[p.family_clan] = (acc[p.family_clan] || 0) + 1
     }
     return acc
   }, {})
@@ -54,32 +67,32 @@ export default function DashboardPage() {
     .slice(0, 5) // Limit to top 5 for better visualization
 
   const ageRangeData = [
-    { name: "0-17", value: people.filter((p) => p.dateOfBirth && calculateAge(p.dateOfBirth) < 18).length },
+    { name: "0-17", value: people.filter((p) => p.date_of_birth && calculateAge(p.date_of_birth) < 18).length },
     {
       name: "18-24",
       value: people.filter(
-        (p) => p.dateOfBirth && calculateAge(p.dateOfBirth) >= 18 && calculateAge(p.dateOfBirth) < 25,
+        (p) => p.date_of_birth && calculateAge(p.date_of_birth) >= 18 && calculateAge(p.date_of_birth) < 25,
       ).length,
     },
     {
       name: "25-34",
       value: people.filter(
-        (p) => p.dateOfBirth && calculateAge(p.dateOfBirth) >= 25 && calculateAge(p.dateOfBirth) < 35,
+        (p) => p.date_of_birth && calculateAge(p.date_of_birth) >= 25 && calculateAge(p.date_of_birth) < 35,
       ).length,
     },
     {
       name: "35-44",
       value: people.filter(
-        (p) => p.dateOfBirth && calculateAge(p.dateOfBirth) >= 35 && calculateAge(p.dateOfBirth) < 45,
+        (p) => p.date_of_birth && calculateAge(p.date_of_birth) >= 35 && calculateAge(p.date_of_birth) < 45,
       ).length,
     },
     {
       name: "45-54",
       value: people.filter(
-        (p) => p.dateOfBirth && calculateAge(p.dateOfBirth) >= 45 && calculateAge(p.dateOfBirth) < 55,
+        (p) => p.date_of_birth && calculateAge(p.date_of_birth) >= 45 && calculateAge(p.date_of_birth) < 55,
       ).length,
     },
-    { name: "55+", value: people.filter((p) => p.dateOfBirth && calculateAge(p.dateOfBirth) >= 55).length },
+    { name: "55+", value: people.filter((p) => p.date_of_birth && calculateAge(p.date_of_birth) >= 55).length },
   ].filter((item) => item.value > 0)
 
   const genderData = [
@@ -126,6 +139,19 @@ export default function DashboardPage() {
   const displayAgeData = hasData && ageRangeData.length > 0 ? ageRangeData : placeholderAgeData
   const displayCitizenshipData = hasData && citizenshipData.length > 0 ? citizenshipData : placeholderCitizenshipData
   const displayGenderData = hasData && genderData.length > 0 ? genderData : placeholderGenderData
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading dashboard...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>

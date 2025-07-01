@@ -9,20 +9,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Trash2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { getNotifications, clearNotifications } from "@/utils/notification-service"
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([])
   const [activeTab, setActiveTab] = useState("all")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load notifications from localStorage
-    const storedNotifications = JSON.parse(localStorage.getItem("notifications") || "[]")
-    setNotifications(storedNotifications)
+    loadNotifications()
   }, [])
 
-  const clearAllNotifications = () => {
-    localStorage.setItem("notifications", "[]")
-    setNotifications([])
+  const loadNotifications = async () => {
+    try {
+      setLoading(true)
+      const data = await getNotifications()
+      setNotifications(data)
+    } catch (error) {
+      console.error('Error loading notifications:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const clearAllNotifications = async () => {
+    try {
+      await clearNotifications()
+      setNotifications([])
+    } catch (error) {
+      console.error('Error clearing notifications:', error)
+    }
   }
 
   const getTypeColor = (type) => {
@@ -57,6 +73,19 @@ export default function NotificationsPage() {
 
   const filteredNotifications =
     activeTab === "all" ? notifications : notifications.filter((notification) => notification.type === activeTab)
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading notifications...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>
@@ -101,7 +130,7 @@ export default function NotificationsPage() {
                                 {getTypeLabel(notification.type)}
                               </Badge>
                               <span className="text-sm text-muted-foreground">
-                                {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                                {formatDistanceToNow(new Date(notification.created_at || notification.timestamp), { addSuffix: true })}
                               </span>
                             </div>
                             <p className="font-medium">{notification.message}</p>

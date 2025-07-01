@@ -51,14 +51,19 @@ export function MainLayout({ children }) {
     }
 
     // Get notification count
-    const notifications = getNotifications()
-    setNotificationCount(notifications.length)
+    const loadNotificationCount = async () => {
+      try {
+        const notifications = await getNotifications()
+        setNotificationCount(notifications.length)
+      } catch (error) {
+        console.error('Error loading notification count:', error)
+      }
+    }
+
+    loadNotificationCount()
 
     // Set up interval to check for new notifications
-    const interval = setInterval(() => {
-      const updatedNotifications = getNotifications()
-      setNotificationCount(updatedNotifications.length)
-    }, 30000) // Check every 30 seconds
+    const interval = setInterval(loadNotificationCount, 30000) // Check every 30 seconds
 
     return () => clearInterval(interval)
   }, [router])
