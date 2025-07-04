@@ -101,44 +101,10 @@ export default function DashboardPage() {
     { name: "Other", value: people.filter((p) => p.gender === "other").length },
   ].filter((item) => item.value > 0)
 
-  const COLORS = ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe", "#e0e7ff"]
+  const COLORS = ["#000000", "#404040", "#808080", "#a0a0a0", "#c0c0c0", "#e0e0e0"]
 
-  // If there's no data, show placeholder data for demonstration
+  // Show actual data or empty state
   const hasData = people.length > 0
-
-  const placeholderFamilyData = [
-    { name: "Aduana", value: 12 },
-    { name: "Asona", value: 8 },
-    { name: "Bretuo", value: 6 },
-    { name: "Oyoko", value: 4 },
-    { name: "Agona", value: 3 },
-  ]
-
-  const placeholderAgeData = [
-    { name: "0-17", value: 5 },
-    { name: "18-24", value: 15 },
-    { name: "25-34", value: 25 },
-    { name: "35-44", value: 18 },
-    { name: "45-54", value: 10 },
-    { name: "55+", value: 7 },
-  ]
-
-  const placeholderCitizenshipData = [
-    { name: "Citizens", value: 65 },
-    { name: "Non-Citizens", value: 15 },
-  ]
-
-  const placeholderGenderData = [
-    { name: "Male", value: 45 },
-    { name: "Female", value: 35 },
-    { name: "Other", value: 5 },
-  ]
-
-  // Use actual data if available, otherwise use placeholder data
-  const displayFamilyData = hasData && familyData.length > 0 ? familyData : placeholderFamilyData
-  const displayAgeData = hasData && ageRangeData.length > 0 ? ageRangeData : placeholderAgeData
-  const displayCitizenshipData = hasData && citizenshipData.length > 0 ? citizenshipData : placeholderCitizenshipData
-  const displayGenderData = hasData && genderData.length > 0 ? genderData : placeholderGenderData
 
   if (isLoading) {
     return (
@@ -161,8 +127,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Total Audience</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{hasData ? totalAudience : "80"}</div>
-            {!hasData && <div className="text-xs text-muted-foreground">(Demo data)</div>}
+            <div className="text-2xl font-bold">{totalAudience}</div>
           </CardContent>
         </Card>
         <Card>
@@ -170,8 +135,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Families/Clans</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{hasData ? familiesCount : "5"}</div>
-            {!hasData && <div className="text-xs text-muted-foreground">(Demo data)</div>}
+            <div className="text-2xl font-bold">{familiesCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -179,8 +143,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Hometowns</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{hasData ? hometownsCount : "12"}</div>
-            {!hasData && <div className="text-xs text-muted-foreground">(Demo data)</div>}
+            <div className="text-2xl font-bold">{hometownsCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -188,105 +151,119 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">New This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{hasData ? newThisMonth : "15"}</div>
-            {!hasData && <div className="text-xs text-muted-foreground">(Demo data)</div>}
+            <div className="text-2xl font-bold">{newThisMonth}</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Family/Clan Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={displayFamilyData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#4f46e5" />
-              </BarChart>
-            </ResponsiveContainer>
-            {!hasData && <div className="text-xs text-center text-muted-foreground mt-2">(Demo data)</div>}
-          </CardContent>
-        </Card>
+      {hasData ? (
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Family/Clan Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={familyData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#000000" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Age Range Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={displayAgeData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#6366f1" />
-              </BarChart>
-            </ResponsiveContainer>
-            {!hasData && <div className="text-xs text-center text-muted-foreground mt-2">(Demo data)</div>}
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Age Range Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ageRangeData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#404040" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Citizenship Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={displayCitizenshipData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          <Card>
+            <CardHeader>
+              <CardTitle>Citizenship Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={citizenshipData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {citizenshipData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Gender Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={genderData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {genderData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="mt-6">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center h-[400px]">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
+                <p className="text-muted-foreground mb-4">Start by adding people to see dashboard analytics</p>
+                <button 
+                  onClick={() => router.push('/audience')}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                 >
-                  {displayCitizenshipData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-            {!hasData && <div className="text-xs text-center text-muted-foreground mt-2">(Demo data)</div>}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Gender Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={displayGenderData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {displayGenderData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-            {!hasData && <div className="text-xs text-center text-muted-foreground mt-2">(Demo data)</div>}
-          </CardContent>
-        </Card>
-      </div>
+                  Add People
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </MainLayout>
   )
 }
