@@ -128,7 +128,7 @@ const ChartTooltipContent = React.forwardRef<HTMLDivElement, TooltipProps>(
   (
     {
       active,
-      payload,
+      Payload,
       className,
       indicator = "dot",
       hideLabel = false,
