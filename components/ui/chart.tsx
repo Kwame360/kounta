@@ -102,16 +102,35 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 
+// Define proper types for Recharts tooltip payload
+interface TooltipPayloadItem {
+  value?: any
+  name?: string
+  dataKey?: string
+  color?: string
+  payload?: any
+  [key: string]: any
+}
+
+interface TooltipProps {
+  active?: boolean
+  payload?: TooltipPayloadItem[]
+  label?: any
+  labelFormatter?: (value: any, payload: TooltipPayloadItem[]) => React.ReactNode
+  formatter?: (value: any, name: string, props: TooltipPayloadItem, index: number, payload: any) => React.ReactNode
+  hideLabel?: boolean
+  hideIndicator?: boolean
+  indicator?: "line" | "dot" | "dashed"
+  nameKey?: string
+  labelKey?: string
+  className?: string
+  labelClassName?: string
+  color?: string
+}
+
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<"div"> & {
-      hideLabel?: boolean
-      hideIndicator?: boolean
-      indicator?: "line" | "dot" | "dashed"
-      nameKey?: string
-      labelKey?: string
-    }
+  TooltipProps
 >(
   (
     {
@@ -238,9 +257,9 @@ const ChartTooltipContent = React.forwardRef<
                           {itemConfig?.label || item?.name}
                         </span>
                       </div>
-                      {item?.value && (
+                      {item?.value !== undefined && item?.value !== null && (
                         <span className="font-mono font-medium tabular-nums text-foreground">
-                          {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                          {typeof item.value === 'number' ? item.value.toLocaleString() : String(item.value)}
                         </span>
                       )}
                     </div>
@@ -258,13 +277,24 @@ ChartTooltipContent.displayName = "ChartTooltip"
 
 const ChartLegend = RechartsPrimitive.Legend
 
+interface LegendPayloadItem {
+  value?: string
+  dataKey?: string
+  color?: string
+  [key: string]: any
+}
+
+interface LegendProps {
+  payload?: LegendPayloadItem[]
+  verticalAlign?: "top" | "bottom"
+  hideIcon?: boolean
+  nameKey?: string
+  className?: string
+}
+
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  LegendProps
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
